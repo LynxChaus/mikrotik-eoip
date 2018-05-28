@@ -170,6 +170,7 @@ static void *thr_rx(void *threadid)
 	int i, ret, rxringbufused = 0, rxringbufconsumed, rxringpayload[MAXRINGBUF];
 	int saddr_size = sizeof(saddr[0]);
 	int raw_socket = thr_rx_data->raw_socket;
+	uint16_t tnlid;
 	Tunnel *tunnel;
 	fd_set rfds;
 
@@ -220,12 +221,12 @@ static void *thr_rx(void *threadid)
 		do {
 			ptr = rxringbufptr[rxringbufconsumed];
 			ghdr = (struct gre_hdr *)(ptr + 20);
+			tnlid = __le16_to_cpu(ghdr->tunnel_id);
 			ret = 0;
 			/* TODO: Optimize search of tunnel id */
 			for (i = 0; i < numtunnels; i++) {
 				tunnel = tunnels + i;
-				if ((uint16_t) (__le16_to_cpu(ghdr->tunnel_id))
-				    == (uint16_t) tunnel->id) {
+				if (tnlid == tunnel->id) {
 					/* This is a dynamic tunnel */
 					if (tunnel->dynamic) {
 						if (saddr[rxringbufconsumed].sin_addr.s_addr !=
@@ -237,7 +238,15 @@ static void *thr_rx(void *threadid)
 							pthread_mutex_unlock(&mutex1);
 						}
 					}
-					ret = write(tunnel->fd, ptr + 28, rxringpayload[rxringbufconsumed] - 28);
+					/* skip keep-alive zero payload packets */
+					if (__le16_to_cpu(ghdr->payload_size)) {
+						ret =
+						    write(tunnel->fd, ptr + 28, rxringpayload[rxringbufconsumed] - 28);
+					} else {
+						/* generate keepalive packet back */
+						sendto(raw_socket, ghdr, 8, 0, (struct sockaddr *)&tunnel->daddr,
+							(socklen_t) sizeof(tunnel->daddr));
+					}
 					break;
 				}
 			}
