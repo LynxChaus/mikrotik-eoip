@@ -47,7 +47,6 @@
 #include <limits.h>
 #include <asm/byteorder.h>
 #include "minIni.h"
-#include "config.h"
 
 /* In theory maximum payload that can be handled is 65536, but if we use vectorized
    code with preallocated buffers - it is waste of space, especially for embedded setup.

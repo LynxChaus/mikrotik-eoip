@@ -19,7 +19,6 @@
 #ifndef __UCLIBC__
 #define _GNU_SOURCE
 #endif
-#include "config.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
