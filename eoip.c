@@ -424,6 +424,8 @@ int main(int argc, char **argv)
 
 	/* Fork after creating tunnels, useful for scripts */
 	ret = daemon(1, 1);
+	if (ret)
+	    perror("daemon() fail:");
 
 	if (asprintf(&pidfile, "/var/run/eoip-%s", basename(configname)) == -1)
 		exit(1);
@@ -442,6 +444,8 @@ int main(int argc, char **argv)
 	pthread_attr_setstacksize(&attr, LINUX_THREAD_STACK_SIZE);
 	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
 	rc = pthread_create(&threads[0], &attr, thr_rx, (void *)&thr_rx_data);
+	if (rc)
+	    perror("pthread_create");
 
 	for (i = 0; i < numtunnels; i++) {
 		tunnel = tunnels + i;
